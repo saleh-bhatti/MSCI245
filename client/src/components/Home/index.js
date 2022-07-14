@@ -16,16 +16,19 @@ import FormControlLabel from "@material-ui/core/FormControlLabel";
 import FormLabel from "@material-ui/core/FormLabel";
 import Button from "@material-ui/core/Button";
 import FormHelperText from "@material-ui/core/FormHelperText";
+import { Menu } from "@material-ui/core";
 
 //Dev mode
-const serverURL = ""; //enable for dev mode
+// const serverURL = ""; //enable for dev mode
+
+//my port is 3070
 
 //Deployment mode instructions
-//const serverURL = "http://ov-research-4.uwaterloo.ca:PORT"; //enable for deployed mode; Change PORT to the port number given to you;
+const serverURL = "http://ec2-18-216-101-119.us-east-2.compute.amazonaws.com:3070"; //enable for deployed mode; Change PORT to the port number given to you;
 //To find your port number:
-//ssh to ov-research-4.uwaterloo.ca and run the following command:
+//ssh to ec2-18-216-101-119.us-east-2.compute.amazonaws.com and run the following command:
 //env | grep "PORT"
-//copy the number only and paste it in the serverURL in place of PORT, e.g.: const serverURL = "http://ov-research-4.uwaterloo.ca:3000";
+//copy the number only and paste it in the serverURL in place of PORT, e.g.: const serverURL = "ec2-18-216-101-119.us-east-2.compute.amazonaws.com:3000";
 
 const fetch = require("node-fetch");
 
@@ -164,13 +167,24 @@ Home.propTypes = {
 export default withStyles(styles)(Home);
 
 const Review = () => {
+
+  React.useEffect(() => {
+    getMovies();
+  },[]);
+
+  const [moviesList, setMoviesList] = React.useState([]);
+
+  const [user, setUser] = React.useState(1);
+  const [selectedMovieID, setMovieID] = React.useState();
+
   const [selectedMovie, setMovie] = React.useState("");
   const [enteredTitle, setTitle] = React.useState("");
-  const [enteredReview, setReview] = React.useState("");
+  const [enteredReviewBody, setReviewBody] = React.useState("");
   const [selectedRating, setRating] = React.useState("");
+
   const [errorMovie, setErrorMovie] = React.useState(false);
   const [errorTitle, setErrorTitle] = React.useState(false);
-  const [errorReview, setErrorReview] = React.useState(false);
+  const [errorReviewBody, setErrorReviewBody] = React.useState(false);
   const [errorRating, setErrorRating] = React.useState(false);
 
   const handleSubmitValidation = (event) => {
@@ -180,24 +194,82 @@ const Review = () => {
     if (enteredTitle === "") {
       setErrorTitle(true);
     }
-    if (enteredReview === "") {
-      setErrorReview(true);
+    if (enteredReviewBody === "") {
+      setErrorReviewBody(true);
     }
     if (selectedRating === "") {
       setErrorRating(true);
     }
-    if (selectedMovie.length > 0){
+    if (selectedMovie.length > 0) {
       setErrorMovie(false);
     }
-    if (enteredTitle.length > 0){
+    if (enteredTitle.length > 0) {
       setErrorTitle(false);
     }
-    if (enteredReview.length > 0){
-      setErrorReview(false);
+    if (enteredReviewBody.length > 0) {
+      setErrorReviewBody(false);
     }
-    if (selectedRating.length > 0){
+    if (selectedRating.length > 0) {
       setErrorRating(false);
     }
+    if (
+      selectedMovie.length > 0 &&
+      enteredTitle.length > 0 &&
+      enteredReviewBody.length > 0 &&
+      selectedRating.length > 0
+    ) {
+      // window.alert("Your Review has been Submitted!");
+        addReview();
+    }
+  };
+
+  const getMovies = () => {
+    callApiGetMovies().then((res) => {
+      console.log("callApiGetMovies returned: ", res);
+      var parsed = JSON.parse(res.express);
+      console.log("callApiGetMovies parsed: ", parsed[0]);
+      setMoviesList(parsed);
+    });
+  };
+
+  const callApiGetMovies = async () => {
+    const url = serverURL + "/api/getMovies";
+    console.log(url);
+
+    const response = await fetch(url, {
+      method: "POST",
+    });
+    const body = await response.json();
+    if (response.status !== 200) throw Error(body.message);
+    return body;
+  };
+
+  const addReview = () => {
+    callApiAddReview().then((res) => {
+
+    });
+  };
+
+  const callApiAddReview = async () => {
+    const url = serverURL + "/api/addReview";
+    console.log(url);
+
+    const response = await fetch(url, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        movieID: selectedMovieID, 
+        userID: user,
+        reviewTitle: enteredTitle,
+        reviewContent: enteredReviewBody,
+        reviewScore: selectedRating,
+      }),
+    });
+    const body = await response.json();
+    if (response.status !== 200) throw Error(body.message);
+    return body;
   };
 
   return (
@@ -207,30 +279,28 @@ const Review = () => {
           <Typography variant="h3">Movie Reviews </Typography>
         </h1>
         <MovieSelection
-          onChange={setMovie}
+          onChangeMovie={setMovie}
+          onChangeMovieID={setMovieID}
           value={selectedMovie}
           error={errorMovie}
-        >
-        </MovieSelection>
+          moviesList={moviesList}
+        ></MovieSelection>
         <ReviewTitle
           onChange={setTitle}
           value={enteredTitle}
           error={errorTitle}
-        >
-        </ReviewTitle>
-        <ReviewBody 
-          onChange={setReview} 
-          value={enteredReview}
-          error={errorReview}
-        >
-        </ReviewBody>
+        ></ReviewTitle>
+        <ReviewBody
+          onChange={setReviewBody}
+          value={enteredReviewBody}
+          error={errorReviewBody}
+        ></ReviewBody>
         <div>
-        <ReviewRating
-          onChange={setRating}
-          value={selectedRating}
-          error={errorRating}
-        >
-        </ReviewRating>
+          <ReviewRating
+            onChange={setRating}
+            value={selectedRating}
+            error={errorRating}
+          ></ReviewRating>
         </div>
         <Button
           variant="contained"
@@ -246,7 +316,7 @@ const Review = () => {
           <br></br>
           Review Title: {enteredTitle}
           <br></br>
-          Review: {enteredReview}
+          Review: {enteredReviewBody}
           <br></br>
           Rating: {selectedRating}/5
         </p>
@@ -256,32 +326,19 @@ const Review = () => {
 };
 
 const MovieSelection = (props) => {
+
   const handleMovieChange = (event) => {
-    props.onChange(event.target.value);
+    props.onChangeMovie(event.target.value);
+    props.onChangeMovieID((event.currentTarget.dataset.id));
   };
+
   return (
-    <FormControl
-    fullWidth
-    error={props.error}
-    >
+    <FormControl fullWidth error={props.error}>
       <InputLabel>Movie</InputLabel>
-      <Select 
-      value={props.value}
-      onChange={handleMovieChange} 
-      >
-        <MenuItem value="Alvin and the Chipmunks">
-          Alvin and the Chipmunks
-        </MenuItem>
-        <MenuItem value="Alvin and the Chipmunks: The Squeakquel">
-          Alvin and the Chipmunks: The Squeakquel
-        </MenuItem>
-        <MenuItem value="Alvin and the Chipmunks: Chipwrecked">
-          Alvin and the Chipmunks: Chipwrecked
-        </MenuItem>
-        <MenuItem value="Alvin and the Chipmunks: The Road Chip">
-          Alvin and the Chipmunks: The Road Chip
-        </MenuItem>
-        <MenuItem value="Interstellar">Interstellar</MenuItem>
+      <Select value={props.value} onChange={handleMovieChange}>
+        {props.moviesList.map((item) => {
+          return <MenuItem data-id = {item.id} value={item.name}>{item.name}</MenuItem>;
+        })}
       </Select>
       <FormHelperText>Select a movie to review</FormHelperText>
     </FormControl>
@@ -333,10 +390,10 @@ const ReviewRating = (props) => {
   };
 
   return (
-    <FormControl 
-    style={{ position: "relative", top: "10px" }}
-    error={props.error}
-    helperText="Please select a rating"
+    <FormControl
+      style={{ position: "relative", top: "10px" }}
+      error={props.error}
+      helperText="Please select a rating"
     >
       <FormLabel component="legend">Select Rating</FormLabel>
       <RadioGroup

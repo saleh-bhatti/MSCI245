@@ -13,6 +13,44 @@ app.use(bodyParser.urlencoded({ limit: '50mb', extended: true }));
 
 app.use(express.static(path.join(__dirname, "client/build")));
 
+app.post('/api/getMovies', (req, res) => {
+
+	let connection = mysql.createConnection(config);
+	let sql = 'SELECT * FROM movies'
+	
+	connection.query(sql, (error, results, fields) => {
+		if (error) {
+			return console.error(error.message);
+		}
+
+		let string = JSON.stringify(results);
+		let obj = JSON.parse(string);
+		res.send({ express: string });
+	});
+	connection.end();
+});
+
+app.post('/api/addReview', (req, res) => {
+	let movieID = req.body.movieID;
+	let userID = req.body.userID;
+	let reviewTitle = req.body.reviewTitle;
+	let reviewContent = req.body.reviewContent;
+	let reviewScore = req.body.reviewScore;
+
+	let connection = mysql.createConnection(config);
+
+	let sql = 'INSERT INTO review (movieID, userID, reviewTitle, reviewContent, reviewScore) VALUES (?, ?, ?, ?, ?)'
+	let data = [movieID, userID, reviewTitle, reviewContent, reviewScore];
+
+	connection.query(sql, data, (error, results, fields) => {
+		if (error) {
+			return console.error(error.message);
+		}
+		console.log('Success')
+		// res.send('Sucess');
+	});
+	connection.end();
+})
 
 app.post('/api/loadUserSettings', (req, res) => {
 
@@ -36,7 +74,6 @@ app.post('/api/loadUserSettings', (req, res) => {
 	connection.end();
 });
 
+app.listen(port, () => console.log(`Listening on port ${port}`));
 
-
-app.listen(port, () => console.log(`Listening on port ${port}`)); //for the dev version
-//app.listen(port, '129.97.25.211'); //for the deployed version, specify the IP address of the server
+//app.listen(port, '172.31.31.77'); 
